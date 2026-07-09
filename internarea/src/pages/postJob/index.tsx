@@ -11,7 +11,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { toast } from "react-toastify";
-import axios from "axios";
+import api from "../../utils/api";
 import { useRouter } from "next/navigation";
 const Index = () => {
   const [formData, setFormData] = useState({
@@ -47,7 +47,7 @@ const Index = () => {
     }
     try {
       setisloading(true);
-      await axios.post("http://localhost:5000/api/job", formData);
+      await api.post("/api/job", formData);
       toast.success("Job posted successfully");
       router.push("/adminpanel");
     } catch (error) {

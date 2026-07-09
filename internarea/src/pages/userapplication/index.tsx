@@ -9,7 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import axios from "axios";
+import api from "../../utils/api";
 import { selectuser } from "@/Feature/Userslice";
 import { useSelector } from "react-redux";
 const initialApplications = [
@@ -63,7 +63,7 @@ const Index = () => {
   useEffect(() => {
     const fetchdata = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/application");
+        const res = await api.get("/api/application");
         if (res.data && res.data.length > 0) {
           setdata(res.data);
         }

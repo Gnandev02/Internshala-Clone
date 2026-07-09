@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "../../utils/api";
 import {
   Building2,
   Calendar,
@@ -57,7 +57,7 @@ const Index = () => {
   useEffect(() => {
     const fetchdata = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/application");
+        const res = await api.get("/api/application");
         if (res.data && res.data.length > 0) {
           setdata(res.data);
         }
@@ -84,8 +84,8 @@ const Index = () => {
       setdata(updatedApps);
       toast.success("updated successfully");
 
-      await axios.put(
-        `http://localhost:5000/api/application/${id}`,
+      await api.put(
+        `/api/application/${id}`,
         { action }
       );
     } catch (error) {

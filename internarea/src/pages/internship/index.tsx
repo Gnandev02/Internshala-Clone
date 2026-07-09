@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "../../utils/api";
 import {
   ArrowUpRight,
   Calendar,
@@ -58,7 +58,7 @@ const Index = () => {
   useEffect(()=>{
     const fetchdata=async()=>{
       try {
-        const res=await axios.get( "http://localhost:5000/api/internship")     
+        const res=await api.get( "/api/internship")     
         if (res.data && res.data.length > 0) {
           setinternship(res.data)
           setfilteredInternships(res.data)

@@ -1,5 +1,5 @@
 import { selectuser } from "@/Feature/Userslice";
-import axios from "axios";
+import api from "../../../utils/api";
 import {
   ArrowUpRight,
   Calendar,
@@ -88,7 +88,7 @@ const Index = () => {
       
       const fetchdata = async () => {
         try {
-          const res = await axios.get(`http://localhost:5000/api/internship/${id}`);
+          const res = await api.get(`/api/internship/${id}`);
           if (res.data && Object.keys(res.data).length > 0) {
             setinternship(res.data);
           }
@@ -129,7 +129,7 @@ const Index = () => {
         Application:id,
         availability
       }
-      await axios.post("http://localhost:5000/api/application",applicationdata)
+      await api.post("/api/application",applicationdata)
       toast.success("Application submit successfully")
       router.push('/internship')
     } catch (error) {

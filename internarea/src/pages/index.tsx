@@ -12,7 +12,7 @@ import {
   MapPin,
 } from "lucide-react";
 import Link from "next/link";
-import axios from "axios";
+import api from "../utils/api";
 
 export default function SvgSlider() {
   const categories = [
@@ -119,8 +119,8 @@ export default function SvgSlider() {
     const fetchdata = async () => {
       try {
         const [internshipres, jobres] = await Promise.all([
-          axios.get("http://localhost:5000/api/internship"),
-          axios.get("http://localhost:5000/api/job"),
+          api.get("/api/internship"),
+          api.get("/api/job"),
         ]);
         if (internshipres.data && internshipres.data.length > 0) {
           setinternship(internshipres.data);

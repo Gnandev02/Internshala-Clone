@@ -2,7 +2,7 @@ import { selectuser } from "@/Feature/Userslice";
 import { ExternalLink, Mail, User } from "lucide-react";
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../utils/api";
 import { useSelector } from "react-redux";
 interface User {
   name: string;
@@ -43,7 +43,7 @@ const Index = () => {
   useEffect(() => {
     const fetchdata = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/application");
+        const res = await api.get("/api/application");
         if (res.data && res.data.length > 0) {
           setdata(res.data);
         }

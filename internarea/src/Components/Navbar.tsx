@@ -6,7 +6,7 @@ import { ChevronDown, ChevronUp, Search } from "lucide-react";
 import { signInWithPopup, signOut } from "firebase/auth";
 import { toast } from "react-toastify";
 import { useSelector, useDispatch } from "react-redux";
-import { selectuser } from "@/Feature/Userslice";
+import { selectuser, login } from "@/Feature/Userslice";
 interface User {
   name: string;
   email: string;

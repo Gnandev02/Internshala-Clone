@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "../../../utils/api";
 import { Building2, Calendar, FileText, Loader2, User } from "lucide-react";
 import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
@@ -49,8 +49,8 @@ const Index = () => {
       const fetchdata = async () => {
         try {
           if (!foundApp) setloading(true);
-          const res = await axios.get(
-            `http://localhost:5000/api/application/${id}`
+          const res = await api.get(
+            `/api/application/${id}`
           );
           if (res.data && Object.keys(res.data).length > 0) {
             setdata(res.data);
@@ -64,7 +64,7 @@ const Index = () => {
       fetchdata();
     }
   }, [id]);
-  if (loading) {
+  if (loading || !data) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />

@@ -12,7 +12,7 @@ import {
   MapPin,
   X,
 } from "lucide-react";
-import axios from "axios";
+import api from "../../../utils/api";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
@@ -136,7 +136,7 @@ const Index = () => {
 
       const fetchdata = async () => {
         try {
-          const res = await axios.get(`http://localhost:5000/api/job/${id}`);
+          const res = await api.get(`/api/job/${id}`);
           if (res.data && Object.keys(res.data).length > 0) {
             setjob(res.data);
           }
@@ -176,8 +176,8 @@ const Index = () => {
         Application: id,
         availability,
       };
-      await axios.post(
-        "http://localhost:5000/api/application",
+      await api.post(
+        "/api/application",
         applicationdata
       );
       toast.success("Application submit successfully");

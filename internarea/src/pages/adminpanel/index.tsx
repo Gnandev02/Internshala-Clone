@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import axios from 'axios';
+import api from "../../utils/api";
 import { useRouter } from 'next/navigation';
 import { 
   Briefcase, 
@@ -26,9 +26,9 @@ const Index = () => {
                 try {
                     // We use Promise.allSettled so one failure doesn't crash the rest
                     const results = await Promise.allSettled([
-                        axios.get("http://localhost:5000/api/application").catch(() => ({ data: [] })),
-                        axios.get("http://localhost:5000/api/job").catch(() => ({ data: [] })),
-                        axios.get("http://localhost:5000/api/internship").catch(() => ({ data: [] }))
+                        api.get("/api/application").catch(() => ({ data: [] })),
+                        api.get("/api/job").catch(() => ({ data: [] })),
+                        api.get("/api/internship").catch(() => ({ data: [] }))
                     ]);
                     
                     const apps = results[0].status === 'fulfilled' ? results[0].value.data : [];
