@@ -7,6 +7,7 @@ import { signInWithPopup, signOut } from "firebase/auth";
 import { toast } from "react-toastify";
 import { useSelector, useDispatch } from "react-redux";
 import { selectuser, login } from "@/Feature/Userslice";
+import api from "../utils/api";
 interface User {
   name: string;
   email: string;
@@ -17,7 +18,26 @@ const Navbar = () => {
   const dispatch = useDispatch();
   const handlelogin = async () => {
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      // Sync with MongoDB
+      const res = await api.post("/api/user/sync", {
+        firebaseUid: result.user.uid,
+        name: result.user.displayName,
+        email: result.user.email,
+        photo: result.user.photoURL,
+      });
+
+      dispatch(
+        login({
+          _id: res.data._id,
+          uid: result.user.uid,
+          name: result.user.displayName,
+          email: result.user.email,
+          photo: result.user.photoURL,
+        })
+      );
+
       toast.success("logged in successfully");
     } catch (error) {
       console.error(error);
@@ -56,6 +76,11 @@ const Navbar = () => {
               <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600">
                 <Link href={"/job"}>
                   <span>Jobs</span>
+                </Link>
+              </button>
+              <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600">
+                <Link href={"/public-space"}>
+                  <span>Public Space</span>
                 </Link>
               </button>
               <div className="flex items-center bg-gray-100 rounded-full px-4 py-2">
