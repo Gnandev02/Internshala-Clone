@@ -53,7 +53,7 @@ const Register = () => {
       dispatch(login(res.data));
       
       toast.success("Registration successful!");
-      router.push("/profile");
+      router.push("/");
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Registration failed");
