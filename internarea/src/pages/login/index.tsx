@@ -1,21 +1,18 @@
 import React, { useState } from "react";
-import { User, Mail, Lock } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { useDispatch } from "react-redux";
-import { login } from "@/Feature/Userslice";
-import { createUserWithEmailAndPassword, updateProfile, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/firebase/firebase";
+import Link from "next/link";
 
-const Register = () => {
+const Login = () => {
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
     password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const dispatch = useDispatch();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -27,37 +24,23 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.password) {
-      toast.error("Please fill in all details");
+    if (!formData.email || !formData.password) {
+      toast.error("Please enter email and password");
       return;
     }
 
     try {
       setIsLoading(true);
+      await signInWithEmailAndPassword(auth, formData.email, formData.password);
       
-      // Set flag to prevent auto-login sync in _app.tsx
-      sessionStorage.setItem("isRegistering", "true");
+      // The onAuthStateChanged listener in _app.tsx will handle MongoDB syncing 
+      // and Redux state updates automatically upon successful login.
       
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      
-      const photoURL = `https://api.dicebear.com/7.x/initials/svg?seed=${formData.name}`;
-      await updateProfile(userCredential.user, {
-        displayName: formData.name,
-        photoURL: photoURL,
-      });
-
-      // Sign out immediately after registration to prevent auto-login
-      await signOut(auth);
-      
-      // Clear registration flag
-      sessionStorage.removeItem("isRegistering");
-      
-      toast.success("Registration successful. Please log in to continue.");
-      router.push("/login");
+      toast.success("Logged in successfully");
+      router.push("/");
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || "Registration failed");
-      sessionStorage.removeItem("isRegistering");
+      toast.error(error.message || "Login failed");
     } finally {
       setIsLoading(false);
     }
@@ -67,36 +50,13 @@ const Register = () => {
     <div className="min-h-[calc(100vh-64px)] bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="text-center text-3xl font-extrabold text-gray-900">
-          Create an Account
+          Sign in to your account
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Join InternArea to kickstart your career
-        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Full Name
-              </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  name="name"
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="block w-full text-black pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="John Doe"
-                />
-              </div>
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Email address
@@ -146,12 +106,19 @@ const Register = () => {
                 {isLoading ? (
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
-                    Registering...
+                    Signing in...
                   </div>
                 ) : (
-                  "Create Account"
+                  "Sign in"
                 )}
               </button>
+            </div>
+            
+            <div className="mt-4 text-center text-sm">
+              <span className="text-gray-600">Don&apos;t have an account? </span>
+              <Link href="/register" className="text-blue-600 hover:text-blue-500 font-medium">
+                Register here
+              </Link>
             </div>
           </form>
         </div>
@@ -160,4 +127,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default Login;

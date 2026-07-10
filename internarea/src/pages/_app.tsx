@@ -18,6 +18,11 @@ export default function App({ Component, pageProps }: AppProps) {
       const unsubscribe = auth.onAuthStateChanged(async (authuser) => {
         if (authuser) {
           try {
+            if (sessionStorage.getItem("isRegistering")) {
+              console.log("Skipping sync during registration...");
+              return;
+            }
+
             console.log("Firebase auth state changed, syncing user...");
             const name = authuser.displayName || authuser.email?.split('@')[0] || "User";
             const photo = authuser.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${name}`;

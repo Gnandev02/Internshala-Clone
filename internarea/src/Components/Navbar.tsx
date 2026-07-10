@@ -122,6 +122,12 @@ const Navbar = () => {
                     <span className="text-gray-700">Continue with google</span>
                   </button>
                   <Link 
+                    href={"/login"}
+                    className="text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    Login
+                  </Link>
+                  <Link 
                     href={"/register"}
                     className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700"
                   >
