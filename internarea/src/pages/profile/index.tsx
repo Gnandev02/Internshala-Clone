@@ -55,7 +55,7 @@ const Index = () => {
   }, []);
 
   const userApplications = data === initialApplications
-    ? data.map((app: any) => ({ ...app, user: { ...app.user, name: user?.name || "Guest" } }))
+    ? data.map((app: any) => ({ ...app, user: { ...app.user, name: user ? user.name : "Not signed in" } }))
     : data.filter((app: any) => app.user?.name === user?.name);
   const activeCount = userApplications.filter((app: any) => app.status === "pending").length;
   const acceptedCount = userApplications.filter((app: any) => app.status === "accepted").length;
@@ -84,10 +84,10 @@ const Index = () => {
           {/* Profile Content */}
           <div className="pt-16 pb-8 px-6">
             <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-gray-900">{user?.name || "Guest User"}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{user ? user.name : "Guest"}</h1>
               <div className="mt-2 flex items-center justify-center text-gray-500">
                 <Mail className="h-4 w-4 mr-2" />
-                <span>{user?.email || "guest@example.com"}</span>
+                <span>{user ? user.email : "Not signed in"}</span>
               </div>
             </div>
 

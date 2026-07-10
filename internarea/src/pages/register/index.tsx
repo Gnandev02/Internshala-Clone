@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { login } from "@/Feature/Userslice";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth } from "@/firebase/firebase";
+import api from "../../utils/api";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -32,23 +35,28 @@ const Register = () => {
 
     try {
       setIsLoading(true);
-      // Simulate API call for local testing without backend
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       
-      // Dispatch to Redux to save user state globally
-      dispatch(
-        login({
-          name: formData.name,
-          email: formData.email,
-          photo: `https://api.dicebear.com/7.x/initials/svg?seed=${formData.name}`,
-        })
-      );
+      const photoURL = `https://api.dicebear.com/7.x/initials/svg?seed=${formData.name}`;
+      await updateProfile(userCredential.user, {
+        displayName: formData.name,
+        photoURL: photoURL,
+      });
+
+      const res = await api.post("/api/user/sync", {
+        firebaseUid: userCredential.user.uid,
+        name: formData.name,
+        email: formData.email,
+        photo: photoURL,
+      });
+      
+      dispatch(login(res.data));
       
       toast.success("Registration successful!");
       router.push("/profile");
-    } catch (error) {
-      console.log(error);
-      toast.error("Registration failed");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Registration failed");
     } finally {
       setIsLoading(false);
     }

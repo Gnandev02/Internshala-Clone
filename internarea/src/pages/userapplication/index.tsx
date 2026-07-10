@@ -74,7 +74,7 @@ const Index = () => {
     fetchdata();
   }, []);
   const userapplication = data === initialApplications
-    ? data.map((app: any) => ({ ...app, user: { ...app.user, name: user?.name || "Guest" } }))
+    ? data.map((app: any) => ({ ...app, user: { ...app.user, name: user ? user.name : "Not signed in" } }))
     : data.filter((app:any) => app.user?.name === user?.name);
   const filteredapplications = userapplication.filter((application:any) => {
     const searchmatch =

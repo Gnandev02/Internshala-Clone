@@ -28,28 +28,12 @@ const Navbar = () => {
         photo: result.user.photoURL,
       });
 
-      dispatch(
-        login({
-          _id: res.data._id,
-          uid: result.user.uid,
-          name: result.user.displayName,
-          email: result.user.email,
-          photo: result.user.photoURL,
-        })
-      );
+      dispatch(login(res.data));
 
       toast.success("logged in successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      // Fallback for broken firebase
-      dispatch(
-        login({
-          name: "Rahul",
-          email: "rahul@example.com",
-          photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=faces",
-        })
-      );
-      toast.success("logged in successfully (Mock)");
+      toast.error(error.message || "Login failed");
     }
   };
   const handlelogout = () => {
