@@ -6,6 +6,7 @@ import { useDispatch } from "react-redux";
 import { login } from "@/Feature/Userslice";
 import { createUserWithEmailAndPassword, updateProfile, signOut } from "firebase/auth";
 import { auth } from "@/firebase/firebase";
+import api from "../../utils/api";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -46,6 +47,14 @@ const Register = () => {
         photoURL: photoURL,
       });
 
+      // Explicitly create MongoDB user during registration
+      await api.post("/api/user/sync", {
+        firebaseUid: userCredential.user.uid,
+        name: formData.name,
+        email: formData.email,
+        photo: photoURL,
+      });
+
       // Sign out immediately after registration to prevent auto-login
       await signOut(auth);
       
@@ -55,8 +64,9 @@ const Register = () => {
       toast.success("Registration successful. Please log in to continue.");
       router.push("/login");
     } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || "Registration failed");
+      console.error("Registration Error details:", error.response?.data || error);
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Registration failed";
+      toast.error(`Error: ${errorMsg}`);
       sessionStorage.removeItem("isRegistering");
     } finally {
       setIsLoading(false);

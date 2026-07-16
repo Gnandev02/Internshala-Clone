@@ -9,6 +9,7 @@ router.post("/", async (req, res) => {
     coverLetter: req.body.coverLetter,
     user: req.body.user,
     Application: req.body.Application,
+    availability: req.body.availability,
     body: req.body.body,
   });
   await applicationipdata
