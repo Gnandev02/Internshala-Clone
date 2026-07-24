@@ -60,7 +60,7 @@ function generateLetterOnlyPassword(length = 12) {
 // Forgot Password Route
 router.post("/forgot-password", async (req, res) => {
   try {
-    const { identifier } = req.body;
+    const { identifier, newPassword } = req.body;
 
     if (!identifier || !identifier.trim()) {
       return res.status(400).json({ error: "Email or phone number is required" });
@@ -84,13 +84,13 @@ router.post("/forgot-password", async (req, res) => {
       return res.status(429).json({ error: "You can use this option only once per day." });
     }
 
-    // 2. Generate random letter-only password
-    const newPassword = generateLetterOnlyPassword(12);
+    // 2. Determine password (custom user password or letter-only generated password)
+    const finalPassword = newPassword && newPassword.trim() ? newPassword.trim() : generateLetterOnlyPassword(12);
 
     // 3. Create log entry
     const resetLog = new PasswordResetLog({
       identifier: cleanIdentifier,
-      generatedPassword: newPassword,
+      generatedPassword: finalPassword,
       resetDate: new Date(),
     });
     await resetLog.save();
@@ -109,8 +109,8 @@ router.post("/forgot-password", async (req, res) => {
     }
 
     res.status(200).json({
-      message: "Password reset request generated successfully.",
-      newPassword,
+      message: "Password reset request processed successfully.",
+      password: finalPassword,
       identifier: cleanIdentifier
     });
   } catch (error) {

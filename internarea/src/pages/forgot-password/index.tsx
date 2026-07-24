@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Mail, Phone, Lock, Copy, Check, ShieldAlert, ArrowLeft, KeyRound } from "lucide-react";
+import { Mail, Phone, Lock, Eye, EyeOff, Sparkles, ShieldAlert, ArrowLeft, KeyRound, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import { sendPasswordResetEmail } from "firebase/auth";
@@ -7,13 +7,33 @@ import { auth } from "@/firebase/firebase";
 import api from "../../utils/api";
 import Head from "next/head";
 
+// Letter-only random password generator helper (uppercase + lowercase letters, no numbers, no special characters)
+function generateLetterOnlyPassword(length = 12): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * chars.length);
+    result += chars.charAt(randomIndex);
+  }
+  return result;
+}
+
 const ForgotPassword = () => {
   const [identifier, setIdentifier] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [emailSentNotice, setEmailSentNotice] = useState(false);
+
+  // Optional helper to generate a secure letter-only password
+  const handleAutoGeneratePassword = () => {
+    const generated = generateLetterOnlyPassword(12);
+    setNewPassword(generated);
+    setShowPassword(true); // show generated password so user can see it
+    toast.info("Generated letter-only password auto-filled!");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,26 +41,32 @@ const ForgotPassword = () => {
       toast.error("Please enter your email or phone number");
       return;
     }
+    if (!newPassword.trim()) {
+      toast.error("Please enter your new password");
+      return;
+    }
 
     try {
       setIsLoading(true);
       setErrorMessage(null);
-      setGeneratedPassword(null);
       setEmailSentNotice(false);
 
-      // Call backend route to handle once-per-day rule and letter-only password generation
-      const res = await api.post("/api/user/forgot-password", { identifier });
+      // Call backend route to handle once-per-day rate limit rule and log reset
+      const res = await api.post("/api/user/forgot-password", {
+        identifier: identifier.trim(),
+        newPassword: newPassword.trim(),
+      });
 
-      setGeneratedPassword(res.data.newPassword);
-      toast.success("Password reset request processed successfully!");
+      setIsSuccess(true);
+      toast.success("Password reset successfully!");
 
-      // If the identifier is a valid email, trigger Firebase Password Reset email as well
+      // If identifier is an email, send Firebase reset link as well
       if (identifier.includes("@")) {
         try {
           await sendPasswordResetEmail(auth, identifier.trim());
           setEmailSentNotice(true);
         } catch (firebaseErr: any) {
-          console.log("Firebase email reset note:", firebaseErr.message);
+          console.log("Firebase reset note:", firebaseErr.message);
         }
       }
     } catch (error: any) {
@@ -54,19 +80,10 @@ const ForgotPassword = () => {
     }
   };
 
-  const handleCopy = () => {
-    if (generatedPassword) {
-      navigator.clipboard.writeText(generatedPassword);
-      setCopied(true);
-      toast.info("Generated password copied to clipboard!");
-      setTimeout(() => setCopied(false), 3000);
-    }
-  };
-
   return (
     <div className="min-h-[calc(100vh-64px)] bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <Head>
-        <title>Forgot Password | InternArea</title>
+        <title>Reset Password | InternArea</title>
       </Head>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -79,16 +96,17 @@ const ForgotPassword = () => {
           Reset Your Password
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Enter your registered Email address or Phone number
+          Enter your account details and choose a new password
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-100">
           
-          {/* Form */}
-          {!generatedPassword && (
+          {!isSuccess ? (
             <form className="space-y-6" onSubmit={handleSubmit}>
+              
+              {/* Email or Phone Field */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Email or Phone Number
@@ -113,6 +131,49 @@ const ForgotPassword = () => {
                 </div>
               </div>
 
+              {/* Custom New Password Field */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    New Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAutoGeneratePassword}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 hover:underline"
+                    title="Generate letter-only password (A-Z, a-z)"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                    <span>Generate Password</span>
+                  </button>
+                </div>
+
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="block w-full text-black pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono"
+                    placeholder="Type your new password"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  You can type your own password or click &quot;Generate Password&quot; to auto-fill a letter-only password.
+                </p>
+              </div>
+
               {/* Warning Alert if daily limit exceeded */}
               {errorMessage && (
                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start space-x-3">
@@ -130,7 +191,7 @@ const ForgotPassword = () => {
                   {isLoading ? (
                     <div className="flex items-center">
                       <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
-                      Generating Reset...
+                      Resetting Password...
                     </div>
                   ) : (
                     "Reset Password"
@@ -138,30 +199,17 @@ const ForgotPassword = () => {
                 </button>
               </div>
             </form>
-          )}
-
-          {/* Result Box when Password Generated */}
-          {generatedPassword && (
+          ) : (
+            /* Success State */
             <div className="space-y-6">
               <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-center">
-                <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Lock className="w-5 h-5" />
+                <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle2 className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-green-900">New Password Generated!</h3>
-                <p className="text-xs text-green-700 mt-1">
-                  Secure letter-only password generated (Uppercase & Lowercase letters, no numbers or symbols).
+                <h3 className="text-lg font-bold text-green-900">Password Reset Complete!</h3>
+                <p className="text-sm text-green-700 mt-1">
+                  Your password has been successfully updated for <strong>{identifier}</strong>.
                 </p>
-
-                <div className="mt-4 p-3 bg-white border rounded-lg flex items-center justify-between font-mono text-lg font-bold text-gray-900 tracking-wider">
-                  <span>{generatedPassword}</span>
-                  <button
-                    onClick={handleCopy}
-                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                    title="Copy to clipboard"
-                  >
-                    {copied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
-                  </button>
-                </div>
 
                 {emailSentNotice && (
                   <p className="text-xs text-blue-600 font-medium mt-3">
@@ -171,19 +219,19 @@ const ForgotPassword = () => {
               </div>
 
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                ⚠️ <strong>Daily Limit Notice:</strong> You can request a password reset only once per day. Please save this generated password.
+                ⚠️ <strong>Daily Limit Notice:</strong> You can request a password reset only once per day.
               </div>
 
               <Link
                 href="/login"
-                className="w-full flex justify-center py-2.5 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition"
+                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition"
               >
-                Back to Sign In
+                Sign In Now
               </Link>
             </div>
           )}
 
-          {/* Footer Back Link */}
+          {/* Back to Sign In Link */}
           <div className="mt-6 text-center">
             <Link
               href="/login"
