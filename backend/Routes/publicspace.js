@@ -17,7 +17,7 @@ router.post("/post", upload.fields([{ name: 'images', maxCount: 10 }, { name: 'v
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const friendCount = user.friends.length;
+    const friendCount = (user.friends || []).length;
     
     if (friendCount === 0) {
       return res.status(403).json({ error: "Add friends to start posting." });
@@ -253,4 +253,40 @@ router.post("/share", async (req, res) => {
   }
 });
 
+// 9. Get User Posting Limits & Stats
+router.get("/stats/:userId", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const friendCount = (user.friends || []).length;
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const todayPostCount = await Post.countDocuments({
+      user: req.params.userId,
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    const isUnlimited = friendCount > 10;
+    const dailyLimit = isUnlimited ? "unlimited" : friendCount;
+    const remainingPosts = isUnlimited ? "unlimited" : Math.max(0, friendCount - todayPostCount);
+
+    res.status(200).json({
+      friendCount,
+      todayPostCount,
+      dailyLimit,
+      remainingPosts,
+      canPost: isUnlimited || todayPostCount < friendCount
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 module.exports = router;
+
