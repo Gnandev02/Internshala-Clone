@@ -202,24 +202,24 @@ const ForgotPassword = () => {
           ) : (
             /* Success State */
             <div className="space-y-6">
-              <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-center">
-                <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <CheckCircle2 className="w-6 h-6" />
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-center">
+                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Mail className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-green-900">Password Reset Complete!</h3>
-                <p className="text-sm text-green-700 mt-1">
-                  Your new password has been set for <strong>{identifier}</strong>.
+                <h3 className="text-lg font-bold text-blue-900">Check Your Email Inbox!</h3>
+                <p className="text-sm text-blue-700 mt-1">
+                  A password reset email has been sent to <strong>{identifier}</strong>.
                 </p>
 
-                <p className="text-xs text-green-800 font-semibold bg-green-100 p-2 rounded mt-3">
-                  ✅ Your credentials are updated! You can now log in immediately with your new password.
-                </p>
-
-                {emailSentNotice && (
-                  <p className="text-xs text-blue-600 font-medium mt-3">
-                    📧 A confirmation password reset link has also been sent to your email.
-                  </p>
-                )}
+                <div className="mt-4 p-3 bg-white border border-blue-200 rounded-lg text-left text-xs space-y-1.5 text-gray-700">
+                  <p className="font-bold text-blue-950">To complete your password update:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                    <li>Open the email sent to <strong>{identifier}</strong>.</li>
+                    <li>Click the <strong>Reset Password</strong> link inside the email.</li>
+                    <li>Enter your new password on Firebase&apos;s page.</li>
+                    <li>Return to InternArea and <strong>Sign In</strong>!</li>
+                  </ol>
+                </div>
               </div>
 
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
@@ -230,7 +230,7 @@ const ForgotPassword = () => {
                 href="/login"
                 className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition"
               >
-                Sign In Now
+                Go to Sign In
               </Link>
             </div>
           )}
