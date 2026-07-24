@@ -44,6 +44,81 @@ router.post("/sync", async (req, res) => {
   }
 });
 
+const PasswordResetLog = require("../Model/PasswordResetLog");
+
+// Letter-only random password generator (no numbers, no special characters)
+function generateLetterOnlyPassword(length = 12) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * chars.length);
+    result += chars.charAt(randomIndex);
+  }
+  return result;
+}
+
+// Forgot Password Route
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { identifier } = req.body;
+
+    if (!identifier || !identifier.trim()) {
+      return res.status(400).json({ error: "Email or phone number is required" });
+    }
+
+    const cleanIdentifier = identifier.trim().toLowerCase();
+
+    // 1. Check once-per-day limit
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingLog = await PasswordResetLog.findOne({
+      identifier: cleanIdentifier,
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    if (existingLog) {
+      return res.status(429).json({ error: "You can use this option only once per day." });
+    }
+
+    // 2. Generate random letter-only password
+    const newPassword = generateLetterOnlyPassword(12);
+
+    // 3. Create log entry
+    const resetLog = new PasswordResetLog({
+      identifier: cleanIdentifier,
+      generatedPassword: newPassword,
+      resetDate: new Date(),
+    });
+    await resetLog.save();
+
+    // 4. Update user in MongoDB if found
+    const user = await User.findOne({
+      $or: [
+        { email: cleanIdentifier },
+        { phoneNumber: cleanIdentifier }
+      ]
+    });
+
+    if (user) {
+      user.lastPasswordResetDate = new Date();
+      await user.save();
+    }
+
+    res.status(200).json({
+      message: "Password reset request generated successfully.",
+      newPassword,
+      identifier: cleanIdentifier
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({ error: "Server error during password reset" });
+  }
+});
+
 // Get user profile (optional, for friends list etc.)
 router.get("/:id", async (req, res) => {
   try {
@@ -58,3 +133,4 @@ router.get("/:id", async (req, res) => {
 });
 
 module.exports = router;
+
