@@ -21,6 +21,9 @@ router.post("/sync", async (req, res) => {
         photo,
       });
       await user.save();
+
+      // Clear any previous password reset logs for fresh user registration
+      await PasswordResetLog.deleteMany({ identifier: email.trim().toLowerCase() });
     } else {
       // Optional: Update name/photo if they changed
       let updated = false;
