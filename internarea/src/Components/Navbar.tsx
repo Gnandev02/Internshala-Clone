@@ -28,6 +28,7 @@ const Navbar = () => {
         photo: result.user.photoURL,
       });
 
+      localStorage.setItem("user", JSON.stringify(res.data));
       dispatch(login(res.data));
 
       toast.success("logged in successfully");
@@ -37,6 +38,8 @@ const Navbar = () => {
     }
   };
   const handlelogout = () => {
+    localStorage.removeItem("user");
+    dispatch(logout());
     signOut(auth);
   };
   return (

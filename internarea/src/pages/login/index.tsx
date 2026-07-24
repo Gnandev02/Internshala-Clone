@@ -40,6 +40,7 @@ const Login = () => {
         password: formData.password,
       });
 
+      localStorage.setItem("user", JSON.stringify(res.data));
       dispatch(loginAction(res.data));
       
       toast.success("Logged in successfully");

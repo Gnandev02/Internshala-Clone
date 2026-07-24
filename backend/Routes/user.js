@@ -71,8 +71,14 @@ router.post("/login", async (req, res) => {
     }
 
     // Compare stored password in MongoDB
-    if (user.password && user.password !== password.trim()) {
-      return res.status(400).json({ error: "Invalid credentials. Incorrect password." });
+    if (user.password) {
+      if (user.password.trim() !== password.trim()) {
+        return res.status(400).json({ error: "Invalid credentials. Incorrect password." });
+      }
+    } else {
+      // Set password for existing record if missing
+      user.password = password.trim();
+      await user.save();
     }
 
     res.status(200).json(user);

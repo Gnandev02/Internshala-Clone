@@ -15,6 +15,18 @@ export default function App({ Component, pageProps }: AppProps) {
   function AuthListener() {
     const dispatch = useDispatch();
     useEffect(() => {
+      // 1. Restore local MongoDB user session if stored in localStorage
+      const localUserStr = localStorage.getItem("user");
+      if (localUserStr) {
+        try {
+          const localUser = JSON.parse(localUserStr);
+          dispatch(login(localUser));
+        } catch (e) {
+          console.error("Failed to parse local user session:", e);
+        }
+      }
+
+      // 2. Listen to Firebase auth, but do not logout MongoDB user if authenticated locally
       const unsubscribe = auth.onAuthStateChanged(async (authuser) => {
         if (authuser) {
           try {
@@ -27,7 +39,6 @@ export default function App({ Component, pageProps }: AppProps) {
             const name = authuser.displayName || authuser.email?.split('@')[0] || "User";
             const photo = authuser.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${name}`;
             
-            // Sync with backend to get MongoDB _id and updated data
             const res = await api.post("/api/user/sync", {
               firebaseUid: authuser.uid,
               name: name,
@@ -35,23 +46,16 @@ export default function App({ Component, pageProps }: AppProps) {
               photo: photo,
             });
             
-            console.log("User synced successfully:", res.data);
+            localStorage.setItem("user", JSON.stringify(res.data));
             dispatch(login(res.data));
           } catch (error) {
             console.error("Error syncing user:", error);
-            // Fallback to Firebase data if API fails
-            dispatch(
-              login({
-                uid: authuser.uid,
-                photo: authuser.photoURL,
-                name: authuser.displayName || authuser.email?.split('@')[0] || "User",
-                email: authuser.email,
-                phoneNumber: authuser.phoneNumber,
-              })
-            );
           }
         } else {
-          dispatch(logout());
+          // Only dispatch logout if localStorage has no active user session
+          if (!localStorage.getItem("user")) {
+            dispatch(logout());
+          }
         }
       });
       return () => unsubscribe();
