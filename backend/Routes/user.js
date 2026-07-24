@@ -105,6 +105,7 @@ router.post("/forgot-password", async (req, res) => {
     });
 
     let firebaseUpdated = false;
+    let firebaseErrorMsg = "";
 
     // 5. Update user password in Firebase Auth via Firebase Admin
     try {
@@ -116,6 +117,7 @@ router.post("/forgot-password", async (req, res) => {
           targetUid = fbUser.uid;
         } catch (e) {
           console.log("Could not fetch user by email from Firebase Auth:", e.message);
+          firebaseErrorMsg = `User ${cleanIdentifier} not found in Firebase Auth.`;
         }
       }
 
@@ -123,9 +125,18 @@ router.post("/forgot-password", async (req, res) => {
         await admin.auth().updateUser(targetUid, { password: finalPassword });
         firebaseUpdated = true;
         console.log(`✓ Firebase Auth password updated successfully for UID: ${targetUid}`);
+      } else if (!firebaseErrorMsg) {
+        firebaseErrorMsg = "No account found matching that email or phone number.";
       }
     } catch (fbErr) {
       console.error("Firebase Auth password update error:", fbErr.message);
+      firebaseErrorMsg = fbErr.message;
+    }
+
+    if (!firebaseUpdated) {
+      return res.status(400).json({
+        error: `Could not update password in Firebase: ${firebaseErrorMsg || "Firebase Admin credentials missing."}`
+      });
     }
 
     if (user) {
