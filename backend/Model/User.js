@@ -4,8 +4,9 @@ const userSchema = new mongoose.Schema(
   {
     firebaseUid: {
       type: String,
-      required: true,
-      unique: true,
+      default: function () {
+        return new mongoose.Types.ObjectId().toString();
+      },
     },
     name: {
       type: String,
@@ -14,6 +15,10 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
+      unique: true,
+    },
+    password: {
+      type: String,
     },
     phoneNumber: {
       type: String,

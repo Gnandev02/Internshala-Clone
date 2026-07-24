@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { Mail, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/firebase/firebase";
+import { useDispatch } from "react-redux";
+import { login as loginAction } from "@/Feature/Userslice";
 import Link from "next/link";
+import api from "../../utils/api";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -13,6 +14,7 @@ const Login = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const dispatch = useDispatch();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -31,17 +33,21 @@ const Login = () => {
 
     try {
       setIsLoading(true);
-      await signInWithEmailAndPassword(auth, formData.email, formData.password);
       
-      // The onAuthStateChanged listener in _app.tsx will handle MongoDB syncing 
-      // and Redux state updates automatically upon successful login.
+      // Authenticate directly with MongoDB backend
+      const res = await api.post("/api/user/login", {
+        email: formData.email,
+        password: formData.password,
+      });
+
+      dispatch(loginAction(res.data));
       
       toast.success("Logged in successfully");
       router.push("/");
     } catch (error: any) {
       console.error("Login Error details:", error.response?.data || error);
-      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Login failed";
-      toast.error(`Error: ${errorMsg}`);
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message || "Login failed";
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }

@@ -36,38 +36,31 @@ const Register = () => {
     try {
       setIsLoading(true);
       
-      // Set flag to prevent auto-login sync in _app.tsx
-      sessionStorage.setItem("isRegistering", "true");
-      
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      
-      const photoURL = `https://api.dicebear.com/7.x/initials/svg?seed=${formData.name}`;
-      await updateProfile(userCredential.user, {
-        displayName: formData.name,
-        photoURL: photoURL,
-      });
-
-      // Explicitly create MongoDB user during registration
-      await api.post("/api/user/sync", {
-        firebaseUid: userCredential.user.uid,
+      // Register directly in MongoDB backend
+      await api.post("/api/user/register", {
         name: formData.name,
         email: formData.email,
-        photo: photoURL,
+        password: formData.password,
       });
 
-      // Sign out immediately after registration to prevent auto-login
-      await signOut(auth);
-      
-      // Clear registration flag
-      sessionStorage.removeItem("isRegistering");
+      // Optionally sync Firebase Auth if available, without blocking
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        await updateProfile(userCredential.user, {
+          displayName: formData.name,
+          photoURL: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(formData.name)}`,
+        });
+        await signOut(auth);
+      } catch (fbErr) {
+        console.log("Firebase register note:", fbErr);
+      }
       
       toast.success("Registration successful. Please log in to continue.");
       router.push("/login");
     } catch (error: any) {
       console.error("Registration Error details:", error.response?.data || error);
-      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Registration failed";
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message || "Registration failed";
       toast.error(`Error: ${errorMsg}`);
-      sessionStorage.removeItem("isRegistering");
     } finally {
       setIsLoading(false);
     }

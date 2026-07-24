@@ -1,56 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../Model/User");
-
-// Sync Firebase User to MongoDB
-router.post("/sync", async (req, res) => {
-  try {
-    const { firebaseUid, name, email, photo } = req.body;
-
-    if (!firebaseUid || !email) {
-      return res.status(400).json({ error: "firebaseUid and email are required" });
-    }
-
-    let user = await User.findOne({ firebaseUid });
-
-    if (!user) {
-      user = new User({
-        firebaseUid,
-        name,
-        email,
-        photo,
-      });
-      await user.save();
-
-      // Clear any previous password reset logs for fresh user registration
-      await PasswordResetLog.deleteMany({ identifier: email.trim().toLowerCase() });
-    } else {
-      // Optional: Update name/photo if they changed
-      let updated = false;
-      if (user.name !== name && name) {
-        user.name = name;
-        updated = true;
-      }
-      if (user.photo !== photo && photo) {
-        user.photo = photo;
-        updated = true;
-      }
-      if (updated) {
-        await user.save();
-      }
-    }
-
-    res.status(200).json(user);
-  } catch (error) {
-    console.error("Error in user sync:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 const PasswordResetLog = require("../Model/PasswordResetLog");
-const admin = require("../config/firebaseAdmin");
 
-// Letter-only random password generator (no numbers, no special characters)
+// Letter-only random password generator helper
 function generateLetterOnlyPassword(length = 12) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   let result = "";
@@ -61,7 +14,75 @@ function generateLetterOnlyPassword(length = 12) {
   return result;
 }
 
-// Forgot Password Route
+// 1. Direct MongoDB User Registration
+router.post("/register", async (req, res) => {
+  try {
+    const { name, email, password, phoneNumber } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: "Name, email, and password are required" });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Check if user already exists in MongoDB
+    const existingUser = await User.findOne({ email: cleanEmail });
+    if (existingUser) {
+      return res.status(400).json({ error: "User already exists with this email" });
+    }
+
+    const photo = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`;
+
+    const user = new User({
+      name,
+      email: cleanEmail,
+      password: password.trim(),
+      phoneNumber: phoneNumber ? phoneNumber.trim() : "",
+      photo,
+    });
+
+    await user.save();
+
+    // Clear any previous password reset logs for fresh user registration
+    await PasswordResetLog.deleteMany({ identifier: cleanEmail });
+
+    res.status(201).json({ message: "User registered successfully in MongoDB", user });
+  } catch (error) {
+    console.error("MongoDB Register Error:", error);
+    res.status(500).json({ error: "Server error during registration" });
+  }
+});
+
+// 2. Direct MongoDB User Login
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Find user in MongoDB by email
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      return res.status(400).json({ error: "User not found. Please register first." });
+    }
+
+    // Compare stored password in MongoDB
+    if (user.password && user.password !== password.trim()) {
+      return res.status(400).json({ error: "Invalid credentials. Incorrect password." });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("MongoDB Login Error:", error);
+    res.status(500).json({ error: "Server error during login" });
+  }
+});
+
+// 3. Direct MongoDB Password Reset
 router.post("/forgot-password", async (req, res) => {
   try {
     const { identifier, newPassword } = req.body;
@@ -72,7 +93,7 @@ router.post("/forgot-password", async (req, res) => {
 
     const cleanIdentifier = identifier.trim().toLowerCase();
 
-    // 1. Check once-per-day limit
+    // Enforce Once-per-Day limit
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -81,17 +102,31 @@ router.post("/forgot-password", async (req, res) => {
 
     const existingLog = await PasswordResetLog.findOne({
       identifier: cleanIdentifier,
-      createdAt: { $gte: startOfDay, $lte: endOfDay }
+      createdAt: { $gte: startOfDay, $lte: endOfDay },
     });
 
     if (existingLog) {
       return res.status(429).json({ error: "You can use this option only once per day." });
     }
 
-    // 2. Determine password (custom user password or letter-only generated password)
+    // Find user in MongoDB by email or phone number
+    const user = await User.findOne({
+      $or: [{ email: cleanIdentifier }, { phoneNumber: cleanIdentifier }],
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "No account found matching that email or phone number." });
+    }
+
+    // Determine new password (custom user password or letter-only generated password)
     const finalPassword = newPassword && newPassword.trim() ? newPassword.trim() : generateLetterOnlyPassword(12);
 
-    // 3. Create log entry
+    // Directly update password in MongoDB
+    user.password = finalPassword;
+    user.lastPasswordResetDate = new Date();
+    await user.save();
+
+    // Log the reset
     const resetLog = new PasswordResetLog({
       identifier: cleanIdentifier,
       generatedPassword: finalPassword,
@@ -99,67 +134,49 @@ router.post("/forgot-password", async (req, res) => {
     });
     await resetLog.save();
 
-    // 4. Find user in MongoDB
-    const user = await User.findOne({
-      $or: [
-        { email: cleanIdentifier },
-        { phoneNumber: cleanIdentifier }
-      ]
-    });
-
-    let firebaseUpdated = false;
-    let firebaseErrorMsg = "";
-
-    // 5. Update user password in Firebase Auth via Firebase Admin
-    try {
-      let targetUid = user ? user.firebaseUid : null;
-
-      if (!targetUid && cleanIdentifier.includes("@")) {
-        try {
-          const fbUser = await admin.auth().getUserByEmail(cleanIdentifier);
-          targetUid = fbUser.uid;
-        } catch (e) {
-          console.log("Could not fetch user by email from Firebase Auth:", e.message);
-          firebaseErrorMsg = `User ${cleanIdentifier} not found in Firebase Auth.`;
-        }
-      }
-
-      if (targetUid) {
-        await admin.auth().updateUser(targetUid, { password: finalPassword });
-        firebaseUpdated = true;
-        console.log(`✓ Firebase Auth password updated successfully for UID: ${targetUid}`);
-      } else if (!firebaseErrorMsg) {
-        firebaseErrorMsg = "No account found matching that email or phone number.";
-      }
-    } catch (fbErr) {
-      console.error("Firebase Auth password update error:", fbErr.message);
-      firebaseErrorMsg = fbErr.message;
-    }
-
-    if (!firebaseUpdated) {
-      return res.status(400).json({
-        error: `Could not update password in Firebase: ${firebaseErrorMsg || "Firebase Admin credentials missing."}`
-      });
-    }
-
-    if (user) {
-      user.lastPasswordResetDate = new Date();
-      await user.save();
-    }
+    console.log(`✓ MongoDB password updated successfully for: ${cleanIdentifier}`);
 
     res.status(200).json({
-      message: "Password reset request processed successfully.",
+      message: "Password updated successfully in MongoDB.",
       password: finalPassword,
       identifier: cleanIdentifier,
-      firebaseUpdated: firebaseUpdated
     });
   } catch (error) {
-    console.error("Forgot password error:", error);
+    console.error("MongoDB Forgot Password Error:", error);
     res.status(500).json({ error: "Server error during password reset" });
   }
 });
 
-// Get user profile (optional, for friends list etc.)
+// 4. Sync Firebase/Google User to MongoDB (Backward compatibility)
+router.post("/sync", async (req, res) => {
+  try {
+    const { firebaseUid, name, email, photo } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    let user = await User.findOne({ $or: [{ email: cleanEmail }, { firebaseUid }] });
+
+    if (!user) {
+      user = new User({
+        firebaseUid: firebaseUid || new mongoose.Types.ObjectId().toString(),
+        name,
+        email: cleanEmail,
+        photo: photo || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name || "User")}`,
+      });
+      await user.save();
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error in user sync:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// 5. Get User Profile by ID
 router.get("/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id).populate("friends", "name photo email");
@@ -173,4 +190,3 @@ router.get("/:id", async (req, res) => {
 });
 
 module.exports = router;
-
