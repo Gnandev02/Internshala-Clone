@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Navbar from '../../Components/Navbar';
 import PostCard from '../../Components/PostCard';
 import CreatePostModal from '../../Components/CreatePostModal';
 import FriendManager from '../../Components/FriendManager';
@@ -71,7 +70,6 @@ export default function PublicSpace() {
       <Head>
         <title>Public Space | Internshala</title>
       </Head>
-      <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
