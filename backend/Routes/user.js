@@ -45,6 +45,7 @@ router.post("/sync", async (req, res) => {
 });
 
 const PasswordResetLog = require("../Model/PasswordResetLog");
+const admin = require("../config/firebaseAdmin");
 
 // Letter-only random password generator (no numbers, no special characters)
 function generateLetterOnlyPassword(length = 12) {
@@ -95,13 +96,37 @@ router.post("/forgot-password", async (req, res) => {
     });
     await resetLog.save();
 
-    // 4. Update user in MongoDB if found
+    // 4. Find user in MongoDB
     const user = await User.findOne({
       $or: [
         { email: cleanIdentifier },
         { phoneNumber: cleanIdentifier }
       ]
     });
+
+    let firebaseUpdated = false;
+
+    // 5. Update user password in Firebase Auth via Firebase Admin
+    try {
+      let targetUid = user ? user.firebaseUid : null;
+
+      if (!targetUid && cleanIdentifier.includes("@")) {
+        try {
+          const fbUser = await admin.auth().getUserByEmail(cleanIdentifier);
+          targetUid = fbUser.uid;
+        } catch (e) {
+          console.log("Could not fetch user by email from Firebase Auth:", e.message);
+        }
+      }
+
+      if (targetUid) {
+        await admin.auth().updateUser(targetUid, { password: finalPassword });
+        firebaseUpdated = true;
+        console.log(`✓ Firebase Auth password updated successfully for UID: ${targetUid}`);
+      }
+    } catch (fbErr) {
+      console.error("Firebase Auth password update error:", fbErr.message);
+    }
 
     if (user) {
       user.lastPasswordResetDate = new Date();
@@ -111,7 +136,8 @@ router.post("/forgot-password", async (req, res) => {
     res.status(200).json({
       message: "Password reset request processed successfully.",
       password: finalPassword,
-      identifier: cleanIdentifier
+      identifier: cleanIdentifier,
+      firebaseUpdated: firebaseUpdated
     });
   } catch (error) {
     console.error("Forgot password error:", error);

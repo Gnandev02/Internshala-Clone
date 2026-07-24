@@ -208,12 +208,16 @@ const ForgotPassword = () => {
                 </div>
                 <h3 className="text-lg font-bold text-green-900">Password Reset Complete!</h3>
                 <p className="text-sm text-green-700 mt-1">
-                  Your password has been successfully updated for <strong>{identifier}</strong>.
+                  Your new password has been set for <strong>{identifier}</strong>.
+                </p>
+
+                <p className="text-xs text-green-800 font-semibold bg-green-100 p-2 rounded mt-3">
+                  ✅ Your credentials are updated! You can now log in immediately with your new password.
                 </p>
 
                 {emailSentNotice && (
                   <p className="text-xs text-blue-600 font-medium mt-3">
-                    📧 A password reset link has also been sent to your email!
+                    📧 A confirmation password reset link has also been sent to your email.
                   </p>
                 )}
               </div>
